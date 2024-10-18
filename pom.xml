@@ -4,11 +4,11 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.ngeneration</groupId>
-	<artifactId>furthergui</artifactId>
+	<artifactId>miengine</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>jar</packaging>
 
-	<name>furthergui</name>
+	<name>miengine</name>
 	<url>http://maven.apache.org</url>
 
 	<properties>
@@ -16,7 +16,7 @@
 		<maven.compiler.source>17</maven.compiler.source>
 		<maven.compiler.target>17</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<lwjgl.version>3.3.2</lwjgl.version>
+		<lwjgl.version>3.3.3</lwjgl.version>
 		<lwjgl.natives>natives-windows</lwjgl.natives>
 	</properties>
 
