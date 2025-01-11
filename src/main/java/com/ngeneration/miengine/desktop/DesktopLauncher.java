@@ -1,6 +1,7 @@
-package com.ngeneration.miengine;
+package com.ngeneration.miengine.desktop;
 
-import com.ngeneration.miengine.desktop.DesktopApplication;
+import com.ngeneration.miengine.EngineApplicationConfiguration;
+import com.ngeneration.miengine.SampleGame;
 
 public class DesktopLauncher {
 

@@ -51,7 +51,7 @@ public class SpriteBatch {
 
 	private Color color = Color.WHITE;
 	private Texture pixel = new Texture(
-			"C:\\Users\\LuisRodriguez\\xeclipse\\furthergui\\src\\main\\resources\\pixel.png");
+			"..\\furthergui\\src\\main\\resources\\pixel.png");
 
 	private float[] vertices;
 	private int verticesIndex = 0;
