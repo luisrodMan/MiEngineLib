@@ -1,11 +1,16 @@
 package com.ngeneration.miengine.graphics;
 
+import static org.lwjgl.opengl.GL11.GL_BLEND;
 import static org.lwjgl.opengl.GL11.GL_FLOAT;
+import static org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA;
+import static org.lwjgl.opengl.GL11.GL_SRC_ALPHA;
 import static org.lwjgl.opengl.GL11.GL_TEXTURE_2D;
 import static org.lwjgl.opengl.GL11.GL_TRIANGLES;
 import static org.lwjgl.opengl.GL11.GL_UNSIGNED_SHORT;
 import static org.lwjgl.opengl.GL11.glBindTexture;
+import static org.lwjgl.opengl.GL11.glBlendFunc;
 import static org.lwjgl.opengl.GL11.glDrawElements;
+import static org.lwjgl.opengl.GL11.glEnable;
 import static org.lwjgl.opengl.GL13.GL_TEXTURE0;
 import static org.lwjgl.opengl.GL13.glActiveTexture;
 import static org.lwjgl.opengl.GL15.GL_ARRAY_BUFFER;
@@ -14,25 +19,10 @@ import static org.lwjgl.opengl.GL15.GL_STATIC_DRAW;
 import static org.lwjgl.opengl.GL15.glBindBuffer;
 import static org.lwjgl.opengl.GL15.glBufferData;
 import static org.lwjgl.opengl.GL15.glGenBuffers;
-import static org.lwjgl.opengl.GL20.GL_COMPILE_STATUS;
-import static org.lwjgl.opengl.GL20.GL_FRAGMENT_SHADER;
-import static org.lwjgl.opengl.GL20.GL_LINK_STATUS;
-import static org.lwjgl.opengl.GL20.GL_VERTEX_SHADER;
-import static org.lwjgl.opengl.GL20.glAttachShader;
-import static org.lwjgl.opengl.GL20.glCompileShader;
-import static org.lwjgl.opengl.GL20.glCreateProgram;
-import static org.lwjgl.opengl.GL20.glCreateShader;
 import static org.lwjgl.opengl.GL20.glEnableVertexAttribArray;
-import static org.lwjgl.opengl.GL20.glGetProgramInfoLog;
-import static org.lwjgl.opengl.GL20.glGetProgramiv;
-import static org.lwjgl.opengl.GL20.glGetShaderInfoLog;
-import static org.lwjgl.opengl.GL20.glGetShaderiv;
 import static org.lwjgl.opengl.GL20.glGetUniformLocation;
-import static org.lwjgl.opengl.GL20.glLinkProgram;
-import static org.lwjgl.opengl.GL20.glShaderSource;
 import static org.lwjgl.opengl.GL20.glUniform1i;
 import static org.lwjgl.opengl.GL20.glUniformMatrix4fv;
-import static org.lwjgl.opengl.GL20.glUseProgram;
 import static org.lwjgl.opengl.GL20.glVertexAttribPointer;
 import static org.lwjgl.opengl.GL30.glBindVertexArray;
 import static org.lwjgl.opengl.GL30.glGenVertexArrays;
@@ -41,17 +31,27 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 
+import com.ngeneration.miengine.graphics.font.BitmapFont;
+import com.ngeneration.miengine.math.MathUtils;
 import com.ngeneration.miengine.math.Matrix;
 import com.ngeneration.miengine.math.Rectangle;
 import com.ngeneration.miengine.math.Vector2;
 
 public class SpriteBatch {
 
-	private static final int FLOATS_BY_TEXTURE = 4 * 2 + 4 * 2 + 4 * 1;// vertices, uv, color
+	private static final int FLOATS_BY_TEXTURE = 4 * 2 + 4 * 2 + 4 * 4;// vertices, uv, color
+	private static ByteBuffer buffer;
 
 	private Color color = Color.WHITE;
-	private Texture pixel = new Texture(
-			"..\\furthergui\\src\\main\\resources\\pixel.png");
+	static {
+		buffer = ByteBuffer.allocateDirect(4 * 4/* pixels by size */).order(ByteOrder.nativeOrder());
+		buffer.put((byte) (255));
+		buffer.put((byte) (255));
+		buffer.put((byte) (255));
+		buffer.put((byte) (255));
+		buffer.flip();
+	}
+	private Texture pixel = new Texture(buffer, 1, 1, Texture.CHANNELS_RGBA);
 
 	private float[] vertices;
 	private int verticesIndex = 0;
@@ -62,13 +62,11 @@ public class SpriteBatch {
 	private int VBO;
 	private int EBO;
 
-	private int shaderProgram;
-
 	private float tx;
 
 	private float ty;
 
-	private FFont font;
+	private BitmapFont font;
 
 	private int activeTexture = -1;
 
@@ -79,8 +77,10 @@ public class SpriteBatch {
 	private Matrix projectionMatrix;
 
 	private boolean rendering;
+	private static Shader defaultShader;
+	private Shader shader;
 
-	public void setFont(FFont font) {
+	public void setFont(BitmapFont font) {
 		this.font = font;
 	}
 
@@ -89,45 +89,9 @@ public class SpriteBatch {
 	}
 
 	public SpriteBatch(int maxTextures) {
-		int vertexShader;
-		vertexShader = glCreateShader(GL_VERTEX_SHADER);
-		glShaderSource(vertexShader, vertexShaderSource);
-		glCompileShader(vertexShader);
-
-		int[] status = new int[1];
-		glGetShaderiv(vertexShader, GL_COMPILE_STATUS, status);
-
-		System.out.println("vertext: " + status[0]);
-		if (status[0] < 1) {
-			String msg = glGetShaderInfoLog(vertexShader);
-			System.out.println(msg);
-		}
-
-		int fragmentShader;
-		fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
-		glShaderSource(fragmentShader, fragmentShaderSource);
-		glCompileShader(fragmentShader);
-
-		glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, status);
-
-		System.out.println("fragment: " + status[0]);
-		if (status[0] < 1) {
-			String msg = glGetShaderInfoLog(fragmentShader);
-			System.out.println("fragment: " + msg);
-		}
-
-		shaderProgram = glCreateProgram();
-
-		glAttachShader(shaderProgram, vertexShader);
-		glAttachShader(shaderProgram, fragmentShader);
-		glLinkProgram(shaderProgram);
-
-		glGetProgramiv(shaderProgram, GL_LINK_STATUS, status);
-		System.out.println("program: " + status[0]);
-		if (status[0] < 1) {
-			String msg = glGetProgramInfoLog(shaderProgram);
-			System.out.println("program: " + msg);
-		}
+		if (defaultShader == null)
+			defaultShader = new Shader(vertexShaderSource, fragmentShaderSource);
+		shader = defaultShader;
 
 		vertices = new float[maxTextures * FLOATS_BY_TEXTURE];
 		floatBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.nativeOrder()).asFloatBuffer();
@@ -152,11 +116,11 @@ public class SpriteBatch {
 		glBindVertexArray(VAO);
 
 		glBindBuffer(GL_ARRAY_BUFFER, VBO);
-		glVertexAttribPointer(0, 2, GL_FLOAT, false, 5 * 4, 0);
+		glVertexAttribPointer(0, 2, GL_FLOAT, false, 8 * 4, 0);
 		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(1, 2, GL_FLOAT, false, 5 * 4, 2 * 4);
+		glVertexAttribPointer(1, 2, GL_FLOAT, false, 8 * 4, 2 * 4);
 		glEnableVertexAttribArray(1);
-		glVertexAttribPointer(2, 1, GL_FLOAT, false, 5 * 4, 4 * 4);
+		glVertexAttribPointer(2, 4, GL_FLOAT, false, 8 * 4, 4 * 4);
 		glEnableVertexAttribArray(2);
 
 //		glBindVertexArray(VAO);
@@ -212,13 +176,13 @@ public class SpriteBatch {
 		return ty;
 	}
 
-	public void drawString(float x, float y, String text) {
+	public void drawString(float x, float y, String text, float size) {
 		if (font != null) {
-			font.drawString(this, x, y, text);
+			font.drawString(this, x, y, text, size);
 		}
 	}
 
-	public void fillRect(float x, float y, int width, int height) {
+	public void fillRect(float x, float y, float width, float height) {
 		drawTexture(pixel, x, y, width, height);
 	}
 
@@ -232,12 +196,16 @@ public class SpriteBatch {
 		drawTexture(image, x, y, 0, 0, image.getWidth(), image.getHeight(), width, height);
 	}
 
+	public void drawLine(Vector2 point1, Vector2 point2) {
+		drawLine(point1.x, point1.y, point2.x, point2.y);
+	}
+
 	public void drawLine(float x1, float y1, float x2, float y2) {
 		float a = x2 - x1;
 		float b = y2 - y1;
 		float length = (float) Math.sqrt(a * a + b * b);
 		float angle = (float) (Math.atan2(b, a) * 180 / Math.PI);
-		drawTexture(pixel, x1, y1, 0, 0, 1, 1, 0, 0.5f, length, penSize, angle);
+		drawTexture(pixel, x1, y1, 0, 0, 1, 1, 0, 0.5f, length, penSize, -angle);
 	}
 
 	public void drawCircle(float x, float y, float radius, int fidelity) {
@@ -268,6 +236,83 @@ public class SpriteBatch {
 		return array;
 	}
 
+	public void fillRect(float x1, float y1, Color color1, float x2, float y2, Color color2, float x3, float y3,
+			Color color3, float x4, float y4, Color color4) {
+		bindTexture(pixel);
+		vertices[verticesIndex++] = tx + x1;
+		vertices[verticesIndex++] = ty + y1;
+		vertices[verticesIndex++] = 0;
+		vertices[verticesIndex++] = 0;
+		vertices[verticesIndex++] = color1.getRed();
+		vertices[verticesIndex++] = color1.getGreen();
+		vertices[verticesIndex++] = color1.getBlue();
+		vertices[verticesIndex++] = color1.getAlpha();
+		vertices[verticesIndex++] = tx + x2;
+		vertices[verticesIndex++] = ty + y2;
+		vertices[verticesIndex++] = 0;
+		vertices[verticesIndex++] = 1;
+		vertices[verticesIndex++] = color2.getRed();
+		vertices[verticesIndex++] = color2.getGreen();
+		vertices[verticesIndex++] = color2.getBlue();
+		vertices[verticesIndex++] = color2.getAlpha();
+		vertices[verticesIndex++] = tx + x3;
+		vertices[verticesIndex++] = ty + y3;
+		vertices[verticesIndex++] = 1;
+		vertices[verticesIndex++] = 1;
+		vertices[verticesIndex++] = color3.getRed();
+		vertices[verticesIndex++] = color3.getGreen();
+		vertices[verticesIndex++] = color3.getBlue();
+		vertices[verticesIndex++] = color3.getAlpha();
+		vertices[verticesIndex++] = tx + x4;
+		vertices[verticesIndex++] = ty + y4;
+		vertices[verticesIndex++] = 1;
+		vertices[verticesIndex++] = 0;
+		vertices[verticesIndex++] = color4.getRed();
+		vertices[verticesIndex++] = color4.getGreen();
+		vertices[verticesIndex++] = color4.getBlue();
+		vertices[verticesIndex++] = color4.getAlpha();
+		if (verticesIndex >= vertices.length)
+			flush();
+	}
+
+	public void fillTriangle(int x1, int y1, Color color1, int x2, int y2, Color color2, int x3, int y3, Color color3) {
+		bindTexture(pixel);
+		vertices[verticesIndex++] = tx + x1;
+		vertices[verticesIndex++] = ty + y1;
+		vertices[verticesIndex++] = 0;
+		vertices[verticesIndex++] = 0;
+		vertices[verticesIndex++] = color1.getRed();
+		vertices[verticesIndex++] = color1.getGreen();
+		vertices[verticesIndex++] = color1.getBlue();
+		vertices[verticesIndex++] = color1.getAlpha();
+		vertices[verticesIndex++] = tx + x2;
+		vertices[verticesIndex++] = ty + y2;
+		vertices[verticesIndex++] = 0;
+		vertices[verticesIndex++] = 1;
+		vertices[verticesIndex++] = color2.getRed();
+		vertices[verticesIndex++] = color2.getGreen();
+		vertices[verticesIndex++] = color2.getBlue();
+		vertices[verticesIndex++] = color2.getAlpha();
+		vertices[verticesIndex++] = tx + x3;
+		vertices[verticesIndex++] = ty + y3;
+		vertices[verticesIndex++] = 1;
+		vertices[verticesIndex++] = 1;
+		vertices[verticesIndex++] = color3.getRed();
+		vertices[verticesIndex++] = color3.getGreen();
+		vertices[verticesIndex++] = color3.getBlue();
+		vertices[verticesIndex++] = color3.getAlpha();
+		vertices[verticesIndex++] = tx + x3;
+		vertices[verticesIndex++] = ty + y3;
+		vertices[verticesIndex++] = 1;
+		vertices[verticesIndex++] = 1;
+		vertices[verticesIndex++] = color3.getRed();
+		vertices[verticesIndex++] = color3.getGreen();
+		vertices[verticesIndex++] = color3.getBlue();
+		vertices[verticesIndex++] = color3.getAlpha();
+		if (verticesIndex >= vertices.length)
+			flush();
+	}
+
 	public void drawTexture(Texture image, float x, float y, int sx, int sy, int sw, int sh, float width,
 			float height) {
 		drawTexture(image, x, y, sx, sy, sw, sh, 0, 0, (float) width / sw, (float) height / sh, 0);
@@ -290,7 +335,7 @@ public class SpriteBatch {
 		// y -sin cos
 		// 90 cos 0 sin 1
 		// 0,100 -> 0 + 100, 0 + 0 -> 100,0
-		float radians = (float) (rotation * Math.PI / 180);
+		float radians = (float) (-rotation * MathUtils.TO_RADIANS);
 		float cos = (float) Math.cos(radians);
 		float sin = (float) Math.sin(radians);
 
@@ -303,25 +348,37 @@ public class SpriteBatch {
 		vertices[verticesIndex++] = y + (rt * sin + yt * cos);
 		vertices[verticesIndex++] = uvR;
 		vertices[verticesIndex++] = uvB;
-		vertices[verticesIndex++] = color.toInt();
+		vertices[verticesIndex++] = color.getRed();
+		vertices[verticesIndex++] = color.getGreen();
+		vertices[verticesIndex++] = color.getBlue();
+		vertices[verticesIndex++] = color.getAlpha();
 
 		vertices[verticesIndex++] = x + (rt * cos + rb * -sin);
 		vertices[verticesIndex++] = y + (rt * sin + rb * cos);
 		vertices[verticesIndex++] = uvR;
 		vertices[verticesIndex++] = uvT;
-		vertices[verticesIndex++] = color.toInt();
+		vertices[verticesIndex++] = color.getRed();
+		vertices[verticesIndex++] = color.getGreen();
+		vertices[verticesIndex++] = color.getBlue();
+		vertices[verticesIndex++] = color.getAlpha();
 
 		vertices[verticesIndex++] = x + (ll * cos + rb * -sin);
 		vertices[verticesIndex++] = y + (ll * sin + rb * cos);
 		vertices[verticesIndex++] = uvL;
 		vertices[verticesIndex++] = uvT;
-		vertices[verticesIndex++] = color.toInt();
+		vertices[verticesIndex++] = color.getRed();
+		vertices[verticesIndex++] = color.getGreen();
+		vertices[verticesIndex++] = color.getBlue();
+		vertices[verticesIndex++] = color.getAlpha();
 
 		vertices[verticesIndex++] = x + (ll * cos + yt * -sin);
 		vertices[verticesIndex++] = y + (ll * sin + yt * cos);
 		vertices[verticesIndex++] = uvL;
 		vertices[verticesIndex++] = uvB;
-		vertices[verticesIndex++] = color.toInt();
+		vertices[verticesIndex++] = color.getRed();
+		vertices[verticesIndex++] = color.getGreen();
+		vertices[verticesIndex++] = color.getBlue();
+		vertices[verticesIndex++] = color.getAlpha();
 
 		if (verticesIndex >= vertices.length) {
 			flush();
@@ -339,6 +396,10 @@ public class SpriteBatch {
 
 		if (verticesIndex < 1)
 			return;
+
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 //		
 //		floatBuffer.clear();
 ////		floatBuffer.put(vertices);
@@ -349,8 +410,11 @@ public class SpriteBatch {
 		glBufferData(GL_ARRAY_BUFFER, vertices, GL_STATIC_DRAW);
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 
-		glUniform1i(glGetUniformLocation(shaderProgram, "texture1"), 0); // set it manually
+		glUniform1i(glGetUniformLocation(shader.getProgram(), "texture1"), 0); // set it manually
 
+//		System.out.println("loc: " + glGetUniformLocation(shaderProgram, "transform1ddd"));
+		if (projectionMatrix == null)
+			projectionMatrix = new Matrix();
 		glUniformMatrix4fv(0, false, projectionMatrix.m);
 
 		glBindVertexArray(VAO);
@@ -361,21 +425,31 @@ public class SpriteBatch {
 		verticesIndex = 0;
 	}
 
-	private String vertexShaderSource = "#version 330 core\n" + "layout (location = 0) in vec2 aPos;\n"
-			+ "layout (location = 1) in vec2 aUV;\n" + "layout (location = 2) in float aColor;\n"
-			+ "out vec4 finalColor;\n" + "out vec2 TexCord;\n" + "uniform mat4 transform;\n" + "void main()\n" + "{\n"
-			+ "   " + "   	TexCord = aUV;" + "   	int cc = int(aColor);"
-			+ "		finalColor.a = ((cc >> 24) & 255) / 255.0f;\n"
-			+ "	    finalColor.r = ((cc >> 16) & 255) /255.0f;\n" + "		finalColor.g = ((cc >> 8) & 255) /255.0f;\n"
-			+ "	    finalColor.b = (cc & 255) / 255.0f;\n" + "   	gl_Position = transform * vec4(aPos, 1.0f, 1.0f);\n"
-			+ "}";
-	private String fragmentShaderSource = "#version 330 core\r\n" + "in vec4 finalColor;\r\n" + "in vec2 TexCord;\n"
-			+ "uniform sampler2D texture1;\r\n"
+	public void drawRect(float x, float y, float width, float height, float rotation, float originX, float originY) {
+		x += tx;
+		y += ty;
+		if (rotation == 0) {
+			drawRect(x - originX, y - originY, width, height);
+			return;
+		}
 
-			+ "out vec4 frag_colour;\r\n" + "\r\n" + "void main()\r\n" + "{\r\n "
-			+ "    frag_colour = texture(texture1, TexCord) * finalColor;\r\n" + "}";
+		var vector1 = new Vector2();
+		var vector2 = new Vector2();
+		float xx = -originX;
+		float yy = -originY;
 
-	public void drawRect(int x, int y, int width, int height) {
+		vector1.set(xx, yy).rotate(rotation).add(x, y);
+		vector2.set(xx + width, yy).rotate(rotation).add(x, y);
+		drawLine(vector1, vector2);
+		vector1.set(xx + width, yy + height).rotate(rotation).add(x, y);
+		drawLine(vector2, vector1);
+		vector2.set(xx, yy + height).rotate(rotation).add(x, y);
+		drawLine(vector1, vector2);
+		vector1.set(xx, yy).rotate(rotation).add(x, y);
+		drawLine(vector2, vector1);
+	}
+
+	public void drawRect(float x, float y, float width, float height) {
 		drawLine(x, y, x + width, y);
 		drawLine(x, y, x, y + height);
 		drawLine(x + width, y, x + width, y + height);
@@ -387,14 +461,45 @@ public class SpriteBatch {
 	}
 
 	public void begin() {
+		begin(defaultShader);
+	}
+
+	public void begin(Shader shader) {
 		rendering = true;
-		glUseProgram(shaderProgram);
+		if (shader == null)
+			shader = defaultShader;
+		this.shader = shader;
+		flush();
+		shader.begin();
 	}
 
 	public void end() {
 		flush();
-		glUseProgram(0);
+		shader.end();
 		rendering = false;
 	}
+
+	public boolean isRendering() {
+		return rendering;
+	}
+
+	public void setColor(Color color) {
+		this.color = color;
+	}
+
+	public Color getColor() {
+		return new Color(color);
+	}
+
+	public static final String vertexShaderSource = "#version 330 core\n" + "layout (location = 0) in vec2 aPos;\n"
+			+ "layout (location = 1) in vec2 aUV;\n" + "layout (location = 2) in vec4  aColor;\n"
+			+ "out vec4 finalColor;\n" + "out vec2 TexCord;\n" + "uniform mat4 transform;\n" + "void main()\n" + "{\n"
+			+ "   " + "   	TexCord = aUV;" + "	    finalColor = aColor;\n"
+			+ "   	gl_Position = transform * vec4(aPos, 1.0f, 1.0f);\n" + "}";
+	public static final String fragmentShaderSource = "#version 330 core\r\n" + "in vec4 finalColor;\r\n"
+			+ "in vec2 TexCord;\n" + "uniform sampler2D texture1;\r\n"
+
+			+ "out vec4 frag_color;\r\n" + "\r\n" + "void main()\r\n" + "{\r\n "
+			+ "    frag_color = texture(texture1, TexCord) * finalColor;\r\n" + "}";
 
 }

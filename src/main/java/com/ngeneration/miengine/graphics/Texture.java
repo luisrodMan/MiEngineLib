@@ -57,20 +57,19 @@ public class Texture {
 			else
 				throw new RuntimeException("failure: " + STBImage.stbi_failure_reason());
 		}
-		setBuffer(image, width[0], height[0], nrChannels[0]);
+		createTexture(image, width[0], height[0], nrChannels[0]);
 //		STBImage.stbi_image_free(image);
 	}
 
 	public Texture(ByteBuffer buffer, int width, int height, int channels) {
-		setBuffer(buffer, width, height, channels);
+		createTexture(buffer, width, height, channels);
 	}
 
-	private void setBuffer(ByteBuffer buffer, int width, int height, int channels) {
+	private void createTexture(ByteBuffer buffer, int width, int height, int channels) {
 		image = buffer;
 		this.width = width;
 		this.height = height;
 		this.comp = channels;
-
 		createTexture();
 	}
 
@@ -93,12 +92,12 @@ public class Texture {
 //			}
 //			format = GL_RGB;
 //		} else {
-			premultiplyAlpha();
+		premultiplyAlpha();
 
-			glEnable(GL_BLEND);
-			glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 
-			format = GL_RGBA;
+		format = GL_RGBA;
 //		}
 
 		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, image);

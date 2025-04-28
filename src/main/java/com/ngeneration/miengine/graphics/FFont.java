@@ -2,7 +2,6 @@ package com.ngeneration.miengine.graphics;
 
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
@@ -117,7 +116,7 @@ public class FFont {
 
 				// generate new character
 				System.out.println("unknown character: [" + (char) code + "]");
-				cData = chars.get('*');
+				cData = chars.get((int) '*');
 
 			}
 

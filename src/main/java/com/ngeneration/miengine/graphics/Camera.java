@@ -11,6 +11,7 @@ public abstract class Camera {
 	public float viewportWidth;
 	public float viewportHeight;
 	public Vector3 position = new Vector3();
+	public Vector3 scale = new Vector3(1, 1, 1);
 
 	public Camera() {
 		view.setToIdentity();

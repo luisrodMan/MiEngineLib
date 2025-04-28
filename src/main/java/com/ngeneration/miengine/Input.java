@@ -2,22 +2,30 @@ package com.ngeneration.miengine;
 
 import org.lwjgl.glfw.GLFW;
 
+import com.ngeneration.miengine.graphics.OrthographicCamera;
+import com.ngeneration.miengine.math.Vector2;
+import com.ngeneration.miengine.scene.GameObject;
+
 public interface Input {
 
 	public final Keys Keys = new Keys();
 
 	public float getX();
-	
+
 	public float getY();
-	
+
 	public boolean isKeyPressed(int key);
-	
+
 	public boolean isKeyJustPressed(int key);
-	
+
 	public boolean isTouched();
 
-
 	public class Keys {
+
+		public final int MOUSE_BTN1 = GLFW.GLFW_MOUSE_BUTTON_1;
+		public final int MOUSE_BTN2 = GLFW.GLFW_MOUSE_BUTTON_2;
+		public final int MOUSE_BTN3 = GLFW.GLFW_MOUSE_BUTTON_3;
+
 		/**
 		 * The first number in the range of ids used for key events.
 		 */
@@ -939,6 +947,14 @@ public interface Input {
 
 		private boolean consumed;
 
+	}
+
+	public default Vector2 getMouse() {
+		var vector = new Vector2(getX(), getY());
+		// relative to viewport - viewport pos!!!
+		OrthographicCamera camera = (OrthographicCamera) GameObject.getRootCamera();
+		camera.ToWorld(vector);
+		return vector;
 	}
 
 }

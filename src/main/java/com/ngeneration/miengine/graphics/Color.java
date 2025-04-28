@@ -16,6 +16,13 @@ public class Color {
 
 	private int value;
 
+	public Color() {
+	}
+
+	public Color(int value) {
+		this.value = value;
+	}
+
 	public Color(int r, int g, int b) {
 		this(r, g, b, 255);
 	}
@@ -25,6 +32,26 @@ public class Color {
 		value |= (r & 255) << 16;
 		value |= (g & 255) << 8;
 		value |= b & 255;
+	}
+
+	public Color(Color color) {
+		value = color.value;
+	}
+
+	public float getAlpha() {
+		return ((value >> 24) & 255) / 255.0f;
+	}
+
+	public float getRed() {
+		return ((value >> 16) & 255) / 255.0f;
+	}
+
+	public float getGreen() {
+		return ((value >> 8) & 255) / 255.0f;
+	}
+
+	public float getBlue() {
+		return (value & 255) / 255.0f;
 	}
 
 	public int toInt() {
@@ -43,6 +70,10 @@ public class Color {
 		float f = glow;
 		return new Color((int) (((value >> 16) & 255) + f), (int) (((value >> 8) & 255) + f),
 				(int) ((value & 255) + f));
+	}
+
+	public Color cpy() {
+		return new Color(value);
 	}
 
 }

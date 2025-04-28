@@ -3,6 +3,7 @@ package com.ngeneration.miengine.desktop;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.ngeneration.miengine.Engine;
 import com.ngeneration.miengine.Input;
 
 public class DesktopInput implements Input {
@@ -23,7 +24,7 @@ public class DesktopInput implements Input {
 
 	@Override
 	public float getY() {
-		return y;
+		return Engine.graphics.getHeight() - y;
 	}
 
 	@Override

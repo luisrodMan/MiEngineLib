@@ -56,6 +56,10 @@ public class Rectangle {
 		return this;
 	}
 
+	public Rectangle set(RectangleI other) {
+		return set(other.x, other.y, other.getWidth(), other.getHeight());
+	}
+
 	public Rectangle set(Rectangle other) {
 		return set(other.x, other.y, other.width, other.height);
 	}
@@ -84,6 +88,19 @@ public class Rectangle {
 
 	public boolean overlaps(Rectangle dropRectangle) {
 		return intersects(dropRectangle);
+	}
+
+	public Rectangle set(Vector3 location, float size) {
+		set(location.x, location.y, size, size);
+		return this;
+	}
+
+	public void set(float[] values) {
+		set(values[0], values[1], values[2], values[3]);
+	}
+
+	public Vector2 getSize() {
+		return new Vector2(width, height);
 	}
 
 }

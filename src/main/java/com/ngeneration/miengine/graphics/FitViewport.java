@@ -50,7 +50,8 @@ public class FitViewport {
 		// calculate viewport
 		float scaleX = screenWidth / worldWidth;
 		float scaleY = screenHeight / worldHeight;
-
+		System.out.println("viewport: " + worldWidth + "," + worldHeight);
+		System.out.println("viewport2: " + screenWidth + "," + screenHeight);
 		if (scaleX < scaleY) {
 			float vheight = worldHeight * scaleX;
 			viewport.set(0, (int) ((screenHeight - vheight) * 0.5f), screenWidth, (int) vheight);
@@ -59,6 +60,10 @@ public class FitViewport {
 			viewport.set((int) ((screenWidth - vwidth) * 0.5f), 0, (int) vwidth, screenHeight);
 		}
 		apply(b);
+	}
+
+	public float getScale() {
+		return viewport.width / (float) getWorldWidth();
 	}
 
 	public float getWorldWidth() {
@@ -88,9 +93,13 @@ public class FitViewport {
 	 */
 	public void apply(boolean center) {
 		// glViewport
-		
+
 		camera.update();
 		glViewport(viewport.x, viewport.y, viewport.width, viewport.height);
+	}
+
+	public void setCamera(com.ngeneration.miengine.scene.Camera camera) {
+		this.camera = camera.getCamera();
 	}
 
 }

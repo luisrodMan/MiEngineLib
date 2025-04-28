@@ -85,7 +85,6 @@ public class DesktopApplication {
 		Engine.graphics = graphics = new DesktopGraphics(config.getWidth(), config.getHeight());
 		Engine.input = input = new DesktopInput();
 		// update on resize
-		
 
 		init();
 
@@ -114,7 +113,7 @@ public class DesktopApplication {
 		// the window or has pressed the ESCAPE key.
 		glfwSwapInterval(1);
 
-		glClearColor(1.15f, 0.1f, 0.45f, 0.0f);
+		glClearColor(1, 0.0f, 1.0f, 0.0f);
 		glClear(GL_COLOR_BUFFER_BIT); // clear the framebuffer
 
 		listener.create();
@@ -201,7 +200,12 @@ public class DesktopApplication {
 		GLFW.glfwSetMouseButtonCallback(window, (long window, int button, int action, int mods) -> {
 //			System.out.println("action: " + action + "   b" + button);
 			metaModifiers = mods;
-//			processMouseEvent(action == 1 ? MouseEvent.MOUSE_PRESSED : MouseEvent.MOUSE_RELEASED, button, mods);
+
+			if (action == Input.Keys.KEY_PRESSED)
+//				pressedKeys.add(key);
+				input.updateKey(button, true);
+			else if (action == Input.Keys.KEY_RELEASED)
+				input.updateKey(button, false);
 		});
 
 		GLFW.glfwSetKeyCallback(window, new GLFWKeyCallbackI() {
