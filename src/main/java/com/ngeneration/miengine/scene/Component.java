@@ -1,6 +1,8 @@
 package com.ngeneration.miengine.scene;
 
 import com.ngeneration.miengine.Engine;
+import com.ngeneration.miengine.scene.physics.Collider;
+import com.ngeneration.miengine.scene.physics.Collision;
 import com.ngeneration.miengine.util.EngineSerializer;
 
 public class Component {
@@ -62,6 +64,22 @@ public class Component {
 
 	public void onAttached() {
 
+	}
+
+	public void onCollisionEnter2D(Collision collision) {
+
+	}
+
+	public void onTriggerEnter2D(Collider collider) {
+		
+	}
+
+	public void onTriggerExit2D(Collider collider) {
+		
+	}
+
+	public void onTriggerStay2D(Collider collider) {
+		
 	}
 
 }

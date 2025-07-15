@@ -207,4 +207,9 @@ public class Vector2 {
 		return this;
 	}
 
+	public Vector2 setLength(float random) {
+		nor();
+		return scl(random);
+	}
+
 }

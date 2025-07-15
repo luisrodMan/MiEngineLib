@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 import com.ngeneration.miengine.Engine;
 import com.ngeneration.miengine.graphics.Color;
@@ -32,6 +33,7 @@ import com.ngeneration.miengine.math.Vector3;
 import com.ngeneration.miengine.scene.Component;
 import com.ngeneration.miengine.scene.GameObject;
 import com.ngeneration.miengine.scene.GameObjectRef;
+import com.ngeneration.miengine.scene.annotations.Objects;
 import com.ngeneration.miengine.scene.annotations.Serializable;
 import com.ngeneration.miengine.util.indexer.ResourceIndexer;
 import com.ngeneration.miengine.util.indexer.ResourceItem;
@@ -108,7 +110,7 @@ public class EngineSerializer {
 
 	public static JsonObject serializeToJsonObject(GameObject object) {
 		JsonObject json = new JsonObject();
-		JsonArray components = new JsonArray();
+		JsonArray componentsArray = new JsonArray();
 		json.addProperty("i", object.getId());
 		if (!object.isActive())
 			json.addProperty("a", object.isActive());
@@ -123,23 +125,23 @@ public class EngineSerializer {
 			json.addProperty("r", ref.getResourceId());
 		} else {
 			if (object.getComponentCount() > 1) {
-				var list = object.getComponents();
-				list.remove(0); // transformer
-				list.forEach(c -> {
+				var components = object.getComponents();
+				components.remove(0); // transformer
+				components.forEach(c -> {
 					try {
-						JsonObject json1 = new JsonObject();
-						json1.addProperty("i", c.getId());
-						json1.addProperty("t", toShortType.getOrDefault(c.getClass().getCanonicalName(),
+						JsonObject componentJson = new JsonObject();
+						componentJson.addProperty("i", c.getId());
+						componentJson.addProperty("t", toShortType.getOrDefault(c.getClass().getCanonicalName(),
 								c.getClass().getCanonicalName()));
-						json1.addProperty("e", c.isEnabled());
-						json1.add("p", serialize(c));
-						components.add(json1);
+						componentJson.addProperty("e", c.isEnabled());
+						componentJson.add("p", serialize(c));
+						componentsArray.add(componentJson);
 					} catch (IllegalArgumentException | IllegalAccessException e) {
 						e.printStackTrace();
 					}
 				});
-				if (!components.isEmpty())
-					json.add("c", components);
+				if (!componentsArray.isEmpty())
+					json.add("c", componentsArray);
 			}
 			if (!object.getChildren().isEmpty()) {
 				JsonArray children = new JsonArray();
@@ -161,8 +163,8 @@ public class EngineSerializer {
 
 			if (type.isPrimitive()) {
 				if (value instanceof Boolean v) {
-					if (!v)
-						properties.addProperty(field.getName(), v);
+//					if (!v) // bug to deserialize as default true
+					properties.addProperty(field.getName(), v);
 				} else if (value instanceof Integer v)
 					properties.addProperty(field.getName(), v);
 				else if (value instanceof Float v)
@@ -196,13 +198,17 @@ public class EngineSerializer {
 					for (var item : list)
 						if (item != null) {
 							var ser = serialize(item);
-							ser.addProperty("$", getShortType(item.getClass().getCanonicalName()));
+							ser.addProperty("$", getShortType(item.getClass().getName()));
 							array.add(ser);
 						}
 					properties.add(field.getName(), array);
 				}
 			} else {
-				properties.add(field.getName(), serialize(value));
+				var prop = serialize(value);
+				properties.add(field.getName(), prop);
+				if (Modifier.isAbstract(field.getModifiers()) || field.getAnnotationsByType(Objects.class).length > 0) {
+					prop.addProperty("$", getShortType(value.getClass().getName()));
+				}
 			}
 		}
 		return properties;
@@ -285,7 +291,7 @@ public class EngineSerializer {
 					var properties = component.get("p");
 					if (properties != null)
 						deserializeObject(object, instance, properties.getAsJsonObject(), indexer, references,
-								resources);
+								resources, cl);
 					object.addComponent(instance);
 				} catch (Exception e1) {
 					e1.printStackTrace();
@@ -345,7 +351,7 @@ public class EngineSerializer {
 		if (value != null)
 			object.setActive(value.getAsBoolean());
 		value = json.get("tt");
-		if (value != null)
+		if (value != null && !(value instanceof JsonNull))
 			object.setTag(value.getAsString());
 		float[] floats = toFloats(json.get("t").getAsString().split(","));
 		object.transform.setLocation(floats[0], floats[1], floats[2]);
@@ -368,7 +374,7 @@ public class EngineSerializer {
 	}
 
 	private static void deserializeObject(GameObject object, Object instance, JsonObject json, ResourceIndexer indexer,
-			List<ReferenceData> references, Map<Object, Map<String, ResourceItem>> resources) {
+			List<ReferenceData> references, Map<Object, Map<String, ResourceItem>> resources, ClassLoader cl) {
 		json.entrySet().forEach(property -> {
 			Field field;
 			try {
@@ -429,15 +435,23 @@ public class EngineSerializer {
 									var itemJson = arrayItem.getAsJsonObject();
 									var listType = getLongType(itemJson.get("$").getAsString());
 									var itemInstance = Class.forName(listType).newInstance();
-									deserializeObject(null, itemInstance, itemJson, indexer, references, resources);
+									deserializeObject(null, itemInstance, itemJson, indexer, references, resources, cl);
 									c.add(itemInstance);
 								}
 							}
 						}
 					} else {
-						var pinstance = type.newInstance();
-						deserializeObject(null, pinstance, property.getValue().getAsJsonObject(), indexer, references,
-								resources);
+
+						JsonObject jsonData = property.getValue().getAsJsonObject();
+
+						Object pinstance = null;
+						if (Modifier.isAbstract(field.getModifiers()) || jsonData.has("$")) {
+							pinstance = (jsonData.get("$").getAsString().startsWith("game.")
+									? cl.loadClass(jsonData.get("$").getAsString())
+									: Class.forName(jsonData.get("$").getAsString())).newInstance();
+						} else
+							pinstance = type.newInstance();
+						deserializeObject(null, pinstance, jsonData, indexer, references, resources, cl);
 						field.set(instance, pinstance);
 					}
 				}

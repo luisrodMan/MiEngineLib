@@ -12,20 +12,20 @@ public class BoxCollider extends Collider {
 
 	@Override
 	public void render() {
-		var batch = SpriteRenderer.getBatch();
-		batch.begin();
-
-		batch.setColor(Collider.colliderColor);// colliders color !!s
-		batch.setPenSize(1 / GameObject.getRootCamera().scale.z);
-
-		helper1.set(offset).rotate(transform.getRotationZ()).scl(transform.getScaleX(), transform.getScaleY());
-
-		float scx = transform.getScaleX();
-		float scy = transform.getScaleY();
-		batch.drawRect(transform.getLocationX() + helper1.x, transform.getLocationY() + helper1.y, dimension.x * scx,
-				dimension.y * scy, transform.getRotationZ(), dimension.x * 0.5f * scx, dimension.y * 0.5f * scy);
-
-		batch.end();
+//		var batch = SpriteRenderer.getBatch();
+//		batch.begin();
+//
+//		batch.setColor(Collider.colliderColor);// colliders color !!s
+//		batch.setPenSize(1 / GameObject.getRootCamera().scale.z);
+//
+//		helper1.set(offset).rotate(transform.getRotationZ()).scl(transform.getScaleX(), transform.getScaleY());
+//
+//		float scx = transform.getScaleX();
+//		float scy = transform.getScaleY();
+//		batch.drawRect(transform.getLocationX() + helper1.x, transform.getLocationY() + helper1.y, dimension.x * scx,
+//				dimension.y * scy, transform.getRotationZ(), dimension.x * 0.5f * scx, dimension.y * 0.5f * scy);
+//
+//		batch.end();
 	}
 
 }

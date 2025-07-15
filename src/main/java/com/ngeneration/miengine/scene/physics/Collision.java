@@ -9,5 +9,7 @@ public class Collision {
 
 	public float deep;
 	public Vector2 normal = new Vector2();
+	public Collider collider1;
+	public Collider collider2;
 
 }

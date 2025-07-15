@@ -35,6 +35,7 @@ public class SceneApp extends Game {
 	private EngineApplicationConfiguration configuration;
 
 	private CollisionResolver physicResolver;
+	private JsonObject config;
 	static SceneApp instance;
 
 	private Point getPoint(JsonElement e) {
@@ -52,8 +53,8 @@ public class SceneApp extends Game {
 
 		Gson gson = new Gson();
 		try {
-			var config = gson.fromJson(Util.readText(new File("project.miengine")), JsonObject.class)
-					.get("configuration").getAsJsonObject();
+			config = gson.fromJson(Util.readText(new File("project.miengine")), JsonObject.class).get("configuration")
+					.getAsJsonObject();
 			Point window = getPoint(config.get("window"));
 			configuration.setWindowedMode(window.getX(), window.getY()); // this line changes the size of the window
 			var misc = config.get("misc").getAsJsonObject();
@@ -80,7 +81,7 @@ public class SceneApp extends Game {
 
 		new DesktopApplication(this, configuration);
 	}
-	
+
 	void reloadScene() throws FileNotFoundException, IOException {
 		setScene(EngineSerializer.deserialize(new File(scenePath), indexer, null));
 	}
@@ -88,31 +89,38 @@ public class SceneApp extends Game {
 	public void setScene(GameObject scene) {
 		this.scene = scene;
 		SceneManager.setActiveScene(scene);
-		
+
 		camera = scene.getComponent(Camera.class);
+
+		for (var c : scene.getChildren()) {
+			camera = c.getComponent(Camera.class);
+			if (camera != null)
+				break;
+		}
+
 		if (camera == null) {
 			camera = new Camera();
+			var cm = new GameObject("Camera");
+			cm.addComponent(camera);
+			scene.addChild(cm);
+		}
+
+		try {
+			Point viewport = getPoint(config.get("viewport"));
+
 			var cam = new OrthographicCamera();
-			cam.setToOrtho(false, configuration.getWidth(), configuration.getHeight());
+			cam.setToOrtho(false, viewport.getX(), viewport.getY());
 			camera.setCamera(cam);
 			camera.activate();
 			camera.update(Engine.graphics.getDeltaTime());
-			scene.addComponent(camera);
-		}
 
-		Gson gson = new Gson();
-		JsonObject config;
-		try {
-			config = gson.fromJson(Util.readText(new File("project.miengine")), JsonObject.class).get("configuration")
-					.getAsJsonObject();
-			Point viewport = getPoint(config.get("viewport"));
 			this.viewport = new FitViewport(viewport.getX(), viewport.getY());
 			this.viewport.setCamera(camera);
 			this.viewport.update(Engine.graphics.getWidth(), Engine.graphics.getHeight(), false);
 			this.viewport.apply();
 			System.out.println("scale: " + this.viewport.getScale());
 			camera.getCamera().scale.set(this.viewport.getScale());
-		} catch (JsonSyntaxException | IOException e) {
+		} catch (JsonSyntaxException e) {
 			throw new RuntimeException(e);
 		}
 		if (scene != null) {
@@ -120,8 +128,6 @@ public class SceneApp extends Game {
 			scene.start();
 		}
 	}
-	
-	
 
 	@Override
 	public void create() {

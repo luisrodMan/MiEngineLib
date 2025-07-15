@@ -949,6 +949,10 @@ public interface Input {
 
 	}
 
+	public default Vector2 getLocalMouse() {
+		return new Vector2(getX(), getY());
+	}
+
 	public default Vector2 getMouse() {
 		var vector = new Vector2(getX(), getY());
 		// relative to viewport - viewport pos!!!

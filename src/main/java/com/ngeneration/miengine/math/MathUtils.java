@@ -20,6 +20,10 @@ public class MathUtils {
 		return (float) (min + Math.random() * (max - min));
 	}
 
+	public static float random(float value) {
+		return random(0, value);
+	}
+
 	public static void spline(float t, SplinePoint point1, SplinePoint point2, Vector2 result) {
 		Vector2 helper1 = new Vector2();
 		Vector2 helper2 = new Vector2();
@@ -47,6 +51,14 @@ public class MathUtils {
 
 	public static float lerp(float t, float v0, float v1) {
 		return (1 - t) * v0 + t * v1;
+	}
+
+	public static float sin(float angle) {
+		return (float) Math.sin(angle);
+	}
+
+	public static float cos(float angle) {
+		return (float) Math.cos(angle);
 	}
 
 }

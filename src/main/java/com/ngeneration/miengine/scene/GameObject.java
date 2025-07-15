@@ -6,16 +6,23 @@ import java.util.List;
 import java.util.Map;
 
 import com.ngeneration.miengine.graphics.Camera;
+import com.ngeneration.miengine.scene.physics.Collider;
+import com.ngeneration.miengine.scene.physics.Collision;
 
 import lombok.Getter;
 import lombok.Setter;
 
 public class GameObject {
 
+	public static final String BLOCKED_PROPERTY = "@blocked";
+	public static final String SELECTION_ROOT_PROPERTY = "@root";
+	public static final String SELECTED_PROPERTY = "@selected";
+
 	private static final int STARTED = 1;
 	private static final int ACTIVE = 2;
 	private static final int SELECTION_ROOT = 4;
 	private static final int SELECTION_BLOCKED = 8;
+	private static final int SELECTED = 16;
 
 	private static Camera camera;
 	private static int _id = 1;
@@ -111,6 +118,7 @@ public class GameObject {
 		component.gameObject = this;
 		component.transform = transform;
 		if (hasStatus(STARTED)) {
+			component.onAttached();
 			component.start();
 		}
 	}
@@ -308,6 +316,24 @@ public class GameObject {
 		this.tag = tag;
 	}
 
+	/**
+	 * Need to be called only by Engine
+	 * 
+	 * @param value
+	 */
+	public void setAsSelected(boolean value) {
+		if (value)
+			addStatus(SELECTED);
+		else
+			removeStatus(SELECTED);
+		for (Component c : components)
+			c.onPropertyUpdated(SELECTED_PROPERTY);
+	}
+
+	public boolean isSelected() {
+		return hasStatus(SELECTED);
+	}
+
 	public boolean isSelectionRoot() {
 		return hasStatus(SELECTION_ROOT);
 	}
@@ -352,6 +378,30 @@ public class GameObject {
 
 	public void setState(int value) {
 		this.state = value;
+	}
+
+	public void onCollisionEnter2D(Collision collision) {
+		for (var component : components)
+			if (component.isEnabled())
+				component.onCollisionEnter2D(collision);
+	}
+
+	public void onTriggerEnter2D(Collider collider) {
+		for (var component : components)
+			if (component.isEnabled())
+				component.onTriggerEnter2D(collider);
+	}
+
+	public void onTriggerExit2D(Collider collider) {
+		for (var component : components)
+			if (component.isEnabled())
+				component.onTriggerExit2D(collider);
+	}
+
+	public void onTriggerStay2D(Collider collider) {
+		for (var component : components)
+			if (component.isEnabled())
+				component.onTriggerStay2D(collider);
 	}
 
 }
